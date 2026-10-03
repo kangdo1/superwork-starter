@@ -34,15 +34,22 @@ AI가 제안할 수는 있지만, 분류를 결정하고 이유를 쓰는 사람
 
 | 후보 개념 | 최종 분류 | 이유 (체크리스트 중 무엇이 결정적이었나) |
 |---|---|---|
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
+| 모델링 작업 한 건 | Entity (`Job`) | ①②③ 작업 건마다 구별되고, 여러 단계에 걸쳐 지속되며 상태가 바뀐다. ⑤⑥ 빌드·검증·승격 행동이 작용하고, 금지 규칙들이 이 작업 건을 가리킨다. |
+| 엔지니어·에이전트 | Entity (`Engineer`) + Role 분리 | 한 사람·에이전트가 여러 역할을 가질 수 있어서, 인물(Entity)과 자격(Role)을 나눴다. |
+| EBSILON 모델 파일(.ebs) | Entity (`ModelFile`) | ①④ 파일마다 구별되고, Job과 관계를 맺는다. |
+| 설계 기준서(basis.json) | Entity (`DesignBasis`) | ⑤ 사용자의 사양 확인(approve) 행동이 이 문서에 작용한다. ④⑥ Job이 참조하고, '사양 미확인 빌드 금지' 게이트가 이 문서를 가리킨다. ① 확인 뒤 값이 바뀌면 다시 확인받아야 하는, 정체성이 있는 문서다. |
+| 제시된 시스템 계통도 | Entity (`SystemDiagram`) | ④ 하나의 계통도로 여러 작업 건이 만들어질 수 있다. ①② 개정판(revision)마다 구별되고, 작업보다 오래 지속된다. |
+| 정본·템플릿 카탈로그 | Entity (`Catalog`) | ④ 승격된 모델이 등록되는 곳으로, Job과 관계를 맺는다. ①② 작업이 끝난 뒤에도 계속 남아 다른 작업의 기준이 된다. |
+| 모델러 · 검증자 · 사양 확인자 · 정본 관리자 | Role (`modeler` · `verifier` · `spec_approver` · `curator`) | 각 전이의 `principal_role`로, 누가 그 행동을 할 수 있는지를 정한다. |
+| 컴포넌트 사양 | Attribute (`DesignBasis` 의 속성) | 고유한 정체성 없이 기준서에 기록되는 값이다. World는 사양이 확인되었는지만 보고, 값 자체는 EBSILON이 계산에 쓴다. |
+| 수렴 | State (`converged`) | 작업 건이 흐름 속 어디에 있는지 나타내고, 이 상태에 있어야만 검증할 수 있다. 따로 구별할 정체성이 없는 Job의 한 단계일 뿐이다. |
+| 검증 판정(VERDICT) | Transition (`verify` / `reject`) | 판정은 상태를 바꾸는 행동이다. PASS는 `verified`로, FAIL은 `built`로 바꾼다. |
+| 정본 승격 | Transition (`promote`) | `verified`에서 `promoted`로 상태를 바꾸는 행동이고, 정본 관리자만 할 수 있다. |
+| 열수지 오차 | Constraint (`C2_solver_converged` — EBSILON 결과 코드 `calc_status` 가 0·1 인지 확인) | 오차 값과 허용오차는 EBSILON 입력에 이미 들어 있으므로, 오차 판정은 EBSILON에 맡기고 World는 그 결과 신호만 확인한다. |
 
 ## 주인공 Entity
 
 상태기계를 갖는 Entity(`owned_state: true`) 하나를 고르세요. 이 World의 **Work** 입니다.
 
-- 주인공 Entity:
-- 왜 이것인가:
+- 주인공 Entity: `Job` (모델링 작업 한 건)
+- 왜 이것인가: 계통도·기준서·모델 파일·카탈로그·담당자를 모두 이 작업 건이 묶는다. 다른 Entity는 Job이 참조하는 대상이고, 상태가 바뀌는 것은 Job 하나다.

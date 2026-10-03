@@ -1,17 +1,19 @@
 # 공격 시나리오 (BREAK) — 여러분의 World가 막아야 하는 일을 "일어나게" 시도합니다.
 # 형식과 desk-check 방법: scenarios/README.md · 기록: assignment/break-fix.md
 # 판정은 예측(PREDICTION)입니다. 리뷰에서 강사가 실제 Runtime 결과와 비교합니다.
+# expect 는 FIX 이후 World(현재 world.yaml) 기준의 예측입니다. FIX 이전 예측(ALLOW)은 break-fix.md 에 있습니다.
 scenario:
-  name: submit-by-someone-else
+  name: agent-self-spec-approval
   kind: adversarial
-  record: R-1001
-  protects: "Only the requester can submit their own request."
+  record: J-2001                  # seed.yaml — status: spec_drafted, modeler: generalist_agent
+  protects: "The modeler of a job cannot approve the specification of that job."
   steps:
-    - input: "Submit request R-1001."
-      as: blake                   # 요청자가 아닌 다른 employee
-      transition: submit
-      expect: DENY                # 여러분의 예측 — 틀려도 괜찮습니다
+    - input: "Generalist agent approves the design basis of the job it is modeling."
+      as: generalist_agent        # modeler 와 spec_approver 역할을 함께 가진 에이전트
+      transition: approve_spec
+      expect: DENY
       because: >
-        State: R-1001 is draft = submit.from.
-        Role: blake has employee = submit.principal_role.
-        Guard C1_requester_only: principal.id (blake) == request.requester (alex) → false → DENY.
+        State: J-2001 is spec_drafted = approve_spec.from.
+        Role: generalist_agent has spec_approver = approve_spec.principal_role.
+        Guard C3_no_self_spec_approval: principal.id (generalist_agent) != job.modeler (generalist_agent) → false → DENY.
+        (Before the fix approve_spec had no guard, so the same step was predicted ALLOW.)

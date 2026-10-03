@@ -1,63 +1,123 @@
 # ─────────────────────────────────────────────
-#  Your Superwork World
-#  이 파일이 여러분의 세계 전체입니다. 예시(구매 요청)를 여러분의 업무로 바꾸세요.
-#  결정의 이유는 assignment/ 에 기록하고,
-#  바꿀 때마다 반드시:  npm run validate
-#  이 파일은 저장소 루트에 두세요 (리뷰 Import 규약).
+#  EBSILON Modeling World
+#  제시된 시스템을 EBSILON 으로 모델링하는 작업 한 건(Job)의 흐름과 게이트.
+#  물리 계산(수렴·열수지)은 EBSILON 이 하고, 이 World 는 누가 언제 다음 단계로 넘길 수 있는지를 정한다.
+#  결정의 이유는 assignment/ 에 기록하고, 바꿀 때마다 반드시:  npm run validate
 # ─────────────────────────────────────────────
 
 world:
-  id: my-world                     # 여러분의 World id (예: procurement-approval)
+  id: ebsilon-modeling
   version: 0.1.0
   spec: superwork.world/v1         # 언어 버전 — 수정하지 마세요
   mission: >
-    TODO: 이 세계가 완수하려는 일을 한 문장으로.
-    (예: Process purchase requests safely from submission to delivery.)
+    Take one given plant system from an approved specification to a verified,
+    promoted EBSILON model without self-verification or skipped gates.
 
-# E — Entities: 무엇이 존재하고 추적되는가? (assignment/entity-decisions.md)
+# E — Entities (assignment/entity-decisions.md)
 entities:
-  # 예시 — 여러분의 도메인으로 교체하세요
-  Request:
+  Job:
     attributes:
       id: string
-      amount: money
-      requester: ref(Employee)
+      modeler: ref(Engineer)
+      diagram: ref(SystemDiagram)
+      basis: ref(DesignBasis)
+      model: ref(ModelFile)
+      catalog: ref(Catalog)
       status: state
-    owned_state: true              # 상태기계를 갖는 엔티티는 하나로 시작하세요
-  Employee:
+    owned_state: true
+  Engineer:
     attributes:
       id: string
       name: string
-      manager: ref(Employee)
+  SystemDiagram:
+    attributes:
+      id: string
+      revision: string
+  DesignBasis:
+    attributes:
+      id: string
+      compressor_efficiency: number
+      turbine_inlet_temp_c: number
+  ModelFile:
+    attributes:
+      id: string
+      path: string
+      calc_status: number          # EBSILON 계산 결과 코드 (EpCalculationResultStatus)
+                                   # 0 Success · 1 SuccessWithWarnings
+                                   # 2 MaxIterationsReached · 3 MaxIterationsReachedWithWarnings
+                                   # 4 ErrorInCalculation · 5 ErrorBeforeCalculation
+                                   # 6 GeneralError · 7 MaxCalculationTimeExceeded
+  Catalog:
+    attributes:
+      id: string
+      name: string
 
-# S — States: 주인공 Entity가 흐름 속 어디에 있는가?
+# S — States
 states:
-  Request:
-    - draft
-    - submitted
-    # TODO: 여러분의 상태들
+  Job:
+    - spec_drafted
+    - spec_approved
+    - built
+    - converged
+    - verified
+    - promoted
 
-terminal_states: []                # 최종 사실 (예: [closed, rejected])
+terminal_states: [promoted]
 
-# T — Transitions: 무엇이 상태를 바꾸고, 누가 할 수 있는가?
+# T — Transitions
 transitions:
-  submit:
-    from: draft
-    to: submitted
-    principal_role: employee
-    guards: [C1_requester_only]
+  approve_spec:
+    from: spec_drafted
+    to: spec_approved
+    principal_role: spec_approver
+    guards: [C3_no_self_spec_approval]
+  build:
+    from: spec_approved
+    to: built
+    principal_role: modeler
+  converge:
+    from: built
+    to: converged
+    principal_role: modeler
+    guards: [C2_solver_converged]
+  verify:
+    from: converged
+    to: verified
+    principal_role: verifier
+    guards: [C1_no_self_verify]
+  reject:
+    from: converged
+    to: built
+    principal_role: verifier
+    guards: [C1_no_self_verify]
+  promote:
+    from: verified
+    to: promoted
+    principal_role: curator
 
-# C — Constraints: 무엇이 절대 허용되면 안 되는가?
+# C — Constraints
 constraints:
-  C1_requester_only:
-    expr: principal.id == request.requester
-    message: Only the requester can submit.
+  C1_no_self_verify:
+    expr: principal.id != job.modeler
+    message: The modeler of a job cannot verify or reject their own model.
+  C2_solver_converged:
+    expr: job.model.calc_status in [0, 1]
+    message: A job can be marked converged only when the EBSILON run returned Success (0) or SuccessWithWarnings (1).
+  C3_no_self_spec_approval:
+    expr: principal.id != job.modeler
+    message: The modeler of a job cannot approve the specification of that job.
 
 # 행위자 — 시나리오의 `as`는 여기의 id를 씁니다
 principals:
-  - id: alex
-    name: Alex
-    roles: [employee]
-  - id: blake
-    name: Blake
-    roles: [employee]
+  - id: owner                      # 사람: 사양 확인과 정본 승격
+    name: Owner
+    roles: [spec_approver, curator]
+  - id: modeler_agent              # 에이전트: 기준서 초안·빌드·계산
+    name: Modeler Agent
+    roles: [modeler]
+  - id: verifier_agent             # 에이전트: VERDICT, 모델을 고치지 않음
+    name: Verifier Agent
+    roles: [verifier]
+  - id: generalist_agent           # 에이전트: 설정 변경으로 모델러와 사양 확인 역할을 함께 갖게 된 경우 (BREAK용)
+    name: Generalist Agent
+    roles: [modeler, spec_approver]

@@ -1,16 +1,48 @@
-# 정상 시나리오 (RUN) — 여러분의 World로 바꾸세요.
+# 정상 시나리오 (RUN)
 # 형식과 desk-check 방법: scenarios/README.md
 # 판정은 예측(PREDICTION)입니다. 리뷰에서 강사가 실제 Runtime 결과와 비교합니다.
 scenario:
-  name: submit-happy-path
+  name: full-modeling-flow
   kind: happy-path
-  record: R-1001                  # seed.yaml의 레코드 — status: draft 가 시작 상태
+  record: J-1001                  # seed.yaml의 레코드 — status: spec_drafted 가 시작 상태
   steps:
-    - input: "Submit request R-1001."
-      as: alex
-      transition: submit
+    - input: "Owner reviews and approves the design basis of job J-1001."
+      as: owner
+      transition: approve_spec
       expect: ALLOW
       because: >
-        State: R-1001 is draft = submit.from.
-        Role: alex has employee = submit.principal_role.
-        Guard C1_requester_only: principal.id (alex) == request.requester (alex) → true.
+        State: J-1001 is spec_drafted = approve_spec.from.
+        Role: owner has spec_approver = approve_spec.principal_role.
+        Guard C3_no_self_spec_approval: principal.id (owner) != job.modeler (modeler_agent) → true.
+    - input: "Modeler agent builds the EBSILON model for J-1001."
+      as: modeler_agent
+      transition: build
+      expect: ALLOW
+      because: >
+        State: J-1001 is spec_approved = build.from.
+        Role: modeler_agent has modeler = build.principal_role.
+        Guards: none.
+    - input: "Modeler agent runs the EBSILON calculation and marks J-1001 converged."
+      as: modeler_agent
+      transition: converge
+      expect: ALLOW
+      because: >
+        State: J-1001 is built = converge.from.
+        Role: modeler_agent has modeler = converge.principal_role.
+        Guard C2_solver_converged: job.model.calc_status (MF-01 → 0) in [0, 1] → true.
+    - input: "Verifier agent checks the converged model and issues PASS."
+      as: verifier_agent
+      transition: verify
+      expect: ALLOW
+      because: >
+        State: J-1001 is converged = verify.from.
+        Role: verifier_agent has verifier = verify.principal_role.
+        Guard C1_no_self_verify: principal.id (verifier_agent) != job.modeler (modeler_agent) → true.
+    - input: "Owner promotes the verified model to the template catalog."
+      as: owner
+      transition: promote
+      expect: ALLOW
+      because: >
+        State: J-1001 is verified = promote.from.
+        Role: owner has curator = promote.principal_role.
+        Guards: none. J-1001 ends in promoted (terminal).

@@ -20,38 +20,55 @@
 
 | 항목 | 기록 |
 |---|---|
-| 시나리오 (파일 · 이름) | |
-| 지키려는 안전 속성 | 예: "누구도 자신의 요청을 승인할 수 없다" |
-| 시작 레코드와 상태 | |
-| 행위자 / 역할 | |
-| 시도한 Transition | |
-| 관련 Constraint | |
-| **예상 판정** | ALLOW / DENY |
-| 이유 (desk-check) | |
-| 문제 | ALLOW라면: 어떤 규칙이 빠져 있었나? · DENY라면: 어떤 규칙이 막았나? |
+| 시나리오 (파일 · 이름) | `scenarios/adversarial.yaml` · `agent-self-spec-approval` |
+| 지키려는 안전 속성 | 작업을 맡은 모델러는 그 작업의 사양을 스스로 확인할 수 없다. |
+| 시작 레코드와 상태 | `J-2001` · `spec_drafted` · `modeler = generalist_agent` |
+| 행위자 / 역할 | `generalist_agent` · `[modeler, spec_approver]` (설정 변경으로 두 역할이 겹친 에이전트) |
+| 시도한 Transition | `approve_spec` (spec_drafted → spec_approved) |
+| 관련 Constraint | 없음. `approve_spec`에 guard가 없고, C1은 `verify`·`reject`에만, C2는 `converge`에만 붙어 있으며 global Constraint도 없다. |
+| **예상 판정** | **ALLOW** |
+| 이유 (desk-check) | 상태: J-2001은 spec_drafted = approve_spec.from → 통과. 역할: generalist_agent는 spec_approver를 가짐 → 통과. Guard: 없음 → ALLOW. |
+| 문제 | 사양을 확인하는 사람과 그 작업의 모델러가 같은지 확인하는 규칙이 빠져 있었다. 셀프 검증은 C1이 막지만, 같은 종류의 셀프 승인이 사양 확인 단계에는 열려 있었다. |
 
 ## 3. FIX — World 규칙을 바꾸기
 
 프롬프트나 코드가 아니라 **`world.yaml`의 규칙**을 바꿉니다.
 
-- 바꾼 것: (새 Constraint · Transition에 guard 추가 · 역할 변경 · 상태/전이 수정 …)
+- 바꾼 것: 새 Constraint `C3_no_self_spec_approval`을 추가하고 `approve_spec`의 guard로 붙였다.
+  (대안이었던 "C1 재사용"은 막혔을 때 검증 이야기가 메시지로 나와서, "역할 배정만 고침"은 역할이 다시 겹치면 같은 빈틈이 생겨서 고르지 않았다.)
 - 변경 전 → 변경 후 (해당 부분만 붙여 넣기):
 
 ```yaml
 # before
+transitions:
+  approve_spec:
+    from: spec_drafted
+    to: spec_approved
+    principal_role: spec_approver
 
 # after
+transitions:
+  approve_spec:
+    from: spec_drafted
+    to: spec_approved
+    principal_role: spec_approver
+    guards: [C3_no_self_spec_approval]
+constraints:
+  C3_no_self_spec_approval:
+    expr: principal.id != job.modeler
+    message: The modeler of a job cannot approve the specification of that job.
 ```
 
-- `npm run validate` 결과 (수정 후) → `../evidence/`에 저장
+- `npm run validate` 결과 (수정 후) → `../evidence/validate-after.txt`
+  (수정 전 `../evidence/validate-before.txt`와 비교하면 Constraints 2 → 3 외에는 같다. 둘 다 READY FOR STUDIO IMPORT ✓ — 빈틈이 있던 World도 valid였다.)
 
 ## 4. AFTER — 같은 시나리오, 다시 판정
 
 | 항목 | 기록 |
 |---|---|
-| 같은 시나리오 | |
-| **새 예상 판정** | ALLOW / DENY |
-| 이유 — 이제 어떤 규칙이 판정을 바꾸는가 | |
+| 같은 시나리오 | `scenarios/adversarial.yaml` · `agent-self-spec-approval` (J-2001, generalist_agent, approve_spec) |
+| **새 예상 판정** | **DENY (C3_no_self_spec_approval)** |
+| 이유 — 이제 어떤 규칙이 판정을 바꾸는가 | 상태와 역할은 그대로 통과하지만, C3에서 principal.id (generalist_agent) != job.modeler (generalist_agent)가 거짓이 되어 막힌다. 정상 시나리오 1단계(owner가 J-1001 사양 확인)는 owner != modeler_agent라 C3를 통과하므로 여전히 ALLOW다. |
 
 ## 5. 리뷰에서 (강사 기록란 — 비워 두세요)
 

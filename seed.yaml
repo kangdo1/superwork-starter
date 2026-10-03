@@ -2,10 +2,72 @@
 # scenarios/*.yaml 의 `record:` 가 여기의 id를 가리키고, 그 레코드의 status가 시작 상태입니다.
 # 다른 시작 상태가 필요하면 레코드를 추가하세요 (status는 world.yaml에 선언된 state여야 합니다).
 # 리뷰에서 강사가 이 레코드로 여러분의 시나리오를 실제 Runtime에서 실행합니다.
+# 값은 모두 예시 데이터입니다 (실제 플랜트·고객 정보 없음).
 records:
-  - type: Request
-    id: R-1001
-    status: draft
+  # 주인공 — 정상 시나리오의 시작 레코드
+  - type: Job
+    id: J-1001
+    status: spec_drafted
     attributes:
-      amount: 1200
-      requester: alex
+      modeler: modeler_agent
+      diagram: SD-01
+      basis: DB-01
+      model: MF-01
+      catalog: CAT-01
+
+  # 공격 시나리오의 시작 레코드 — 모델러가 generalist_agent 인 작업
+  - type: Job
+    id: J-2001
+    status: spec_drafted
+    attributes:
+      modeler: generalist_agent
+      diagram: SD-01
+      basis: DB-02
+      model: MF-02
+      catalog: CAT-01
+
+  # Job 이 참조하는 레코드
+  - type: Engineer
+    id: owner
+    attributes:
+      name: Owner
+  - type: Engineer
+    id: modeler_agent
+    attributes:
+      name: Modeler Agent
+  - type: Engineer
+    id: verifier_agent
+    attributes:
+      name: Verifier Agent
+  - type: Engineer
+    id: generalist_agent
+    attributes:
+      name: Generalist Agent
+  - type: SystemDiagram
+    id: SD-01
+    attributes:
+      revision: A
+  - type: DesignBasis
+    id: DB-01
+    attributes:
+      compressor_efficiency: 0.88
+      turbine_inlet_temp_c: 1300
+  - type: ModelFile
+    id: MF-01
+    attributes:
+      path: models/example_gt.ebs
+      calc_status: 0               # EBSILON 결과 코드 0 = Success
+  - type: DesignBasis
+    id: DB-02
+    attributes:
+      compressor_efficiency: 0.86
+      turbine_inlet_temp_c: 1250
+  - type: ModelFile
+    id: MF-02
+    attributes:
+      path: models/example_gt_2.ebs
+      calc_status: 0
+  - type: Catalog
+    id: CAT-01
+    attributes:
+      name: Example Template Catalog

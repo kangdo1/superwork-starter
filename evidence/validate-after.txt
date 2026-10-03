@@ -1,0 +1,20 @@
+SUPERWORK WORLD SUMMARY
+
+World          ebsilon-modeling
+Version        0.1.0
+Spec           superwork.world/v1
+
+Entities       6
+States         6
+Transitions    6
+Constraints    3
+
+Schema         PASS
+References     PASS
+Transitions    PASS
+Constraints    PASS
+
+Warnings       0
+
+READY FOR STUDIO IMPORT ✓
+
